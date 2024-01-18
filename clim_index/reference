@@ -1,0 +1,5 @@
+ONI: https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt
+NAO: https://www.cpc.ncep.noaa.gov/products/precip/CWlink/pna/norm.nao.monthly.b5001.current.ascii.table
+PDO: https://www.ncei.noaa.gov/pub/data/cmb/ersst/v5/index/ersst.v5.pdo.dat
+SOI: https://www.cpc.ncep.noaa.gov/data/indices/soi
+IOD: https://psl.noaa.gov/gcos_wgsp/Timeseries/Data/dmi.had.long.data
