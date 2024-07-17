@@ -1,23 +1,19 @@
-library(ncdf4); library(HiClimR); library(raster);library(astsa);library(tidyverse) #library(pcaMethods)
+library(ncdf4); library(HiClimR); library(raster); library(astsa); library(tidyverse) #library(pcaMethods)
 
 # Set working directory and create necessary folders
-variable <- "surftemp" #surftemp or bottemp
-directory_base <- "/home/dmercado/Documents/ClimOsciLakes/"
-directory  <- paste0(directory_base, variable, "/")
+variable <- "bottemp" #surftemp or bottemp
+directory_base <- "/data/brussel/vo/000/bvo00012/vsc10623/ClimOsciLakes/"
 print(paste0("############## START:", variable, "##############"))
-setwd(directory)
-dirs <- c("clustering", "permutation", 
-          "pca_04_explained", "pca_04", "ccf_04", "loadings_04",
-          "pca_explained", "pca", "ccf", "loadings",
-          "acf", "HiClimR_output", "pc_data")
-sapply(dirs, dir.create, showWarnings = FALSE)
-dir.create("clustering/shp")
+setwd(directory_base)
 
 # Open NetCDF file and extract data
 ncin <- nc_open(paste0(directory_base, "nc_laketemp/gotm_20crv3-era5_obsclim_histsoc_default_", variable,"_global_annual_1901_2021.nc"))
 var_nc <- ncvar_get(ncin, variable)
 year_range_total <- 1901:2021 #total year range of the data
 year_range <- 1950:2021 #subset of years to use (to fit with climate indexes)
+
+# Read oscillations table
+oscillations <- read.table(paste0(directory_base, "clim_index/oscillations.txt"), header = T)
 
 # Function to perform PCA and permutation test
 pca_eigenperm<- function(data, nperm = 1000){
@@ -54,236 +50,257 @@ mdata <- mdata[,(50:ncol(mdata))]
 
 # Set clustering parameters
 #k <- c(4,4,6,7,3,7)
-k <- 31
-colors_plot <- c(1:7)
-
-# Read oscillations table
-oscillations <- read.table(paste0(directory_base, "clim_index/oscillations.txt"), header = T)
+colors_plot <- c(1:50)
 
 # Calculate confidence interval of the pca
 n <- length(oscillations$year)
 conf_interval <- 1.96 / sqrt(n)
 
-# Process each region
-system(paste0("rm ", directory, "clustering/*.nc"))
-#c<-0; 
-names_ccf <- c(); ccf_temp_all <- c(); names_ccf_04 <- c(); ccf_temp_all_04 <- c()
-pc_importance <- c(); row_names <- c()
-index_list <- c(); region_list <- c(); cluster_list <- c(); cor04_list <- c(); pc_list <- c()
-
-r <- c("Africa", "Americas", "Antarctica", "Asia", "Europe", "Oceania")
-r_name <- "global"
-###1. Clustering starts
-print(paste0("clustering starts for: ", r))
-#c<-c+1
-
-
-y <- HiClimR(mdata, lon = lon, lat = lat, lonStep = 1, latStep = 1, geogMask = TRUE,
-             continent = r, 
-             meanThresh = NULL, varThresh = NULL, detrend = TRUE,
-             standardize = TRUE, nPC = NULL, method = "ward", hybrid = FALSE, kH = NULL,
-             members = NULL, nSplit = 1, upperTri = TRUE, verbose = TRUE,
-             validClimR = TRUE, k = k, minSize = 1, alpha = 0.01,
-             plot = FALSE, colPalette = NULL, hang = -1, labels = FALSE)
-
-# Save HiClimR results to avoid doing it again
-save(y, file=paste0("HiClimR_output/",r_name,".RData"))
-
-# Save dendogram plot
-pdf(paste0("clustering/",r_name, "_dendo.pdf"))
-plot(y, hang = -1, labels = FALSE)
-dev.off()
-
-# Plot the resulting clustering on a map
-coords_df <- data.frame(lon = y$coords[, 1], lat = y$coords[, 2], region = as.factor(y$region))
-ggplot(coords_df, aes(x = lon, y = lat, fill = region)) +
-  geom_tile() +
-  scale_fill_manual(values = c(colors_plot[1:k[c]])) +
-  theme_minimal() +
-  labs(title = paste("Region:", r), x = "Longitude", y = "Latitude") +
-  coord_fixed()
-ggsave(paste0("clustering/", r, "_map.pdf"),  width = 20, height = 13, units = "cm")
-
-# Export region map and mean timeseries into NetCDF-4 file and raster (tiff)
-y.nc <- HiClimR2nc(y=y, ncfile=paste0("clustering/",r_name,".nc"), timeunit="years", dataunit="mm")
-y.nctotiff <- brick(paste0("clustering/",r_name,".nc"), varname="region")
-writeRaster(y.nctotiff, paste0("clustering/",r_name,".tiff"), overwrite=TRUE)  
-
-###1. Clustering finished
-
-# Loop among cluster to implement PCA and permutation analysis 
-for (cluster in as.numeric(names(table(y$region)))){
+for (k in 5:50){
   
-  cluster_mdata <- mdata[(y$region==cluster & (!is.na(y$region))),]
+  directory  <- paste0(directory_base, "global/",variable, "/")
+  print(paste0("############## START:", k, "##############"))
+  setwd(directory)
+  dir.create(paste0("k", k))
+  directory  <- paste0(directory_base, "global/",variable, "/k", k, "/")
+  setwd(directory)
   
-  #  Scaling and detrending (lowess method) all the data
-  cluster_mdata <- apply(cluster_mdata, MARGIN=1, FUN = function(x){scale(x)})
-  cluster_mdata <- apply(cluster_mdata, MARGIN=2, FUN = function(x){detrend(x, lowess = T)})
+  dirs <- c("clustering", "permutation", 
+            "pca_04_explained", "pca_04", "ccf_04", "loadings_04",
+            "pca_explained", "pca", "ccf", "loadings",
+            "acf", "HiClimR_output", "pc_data")
+  sapply(dirs, dir.create, showWarnings = FALSE)
+  dir.create("clustering/shp")
   
-  ###2. Principal components starts
-  print(paste0("PCA for cluster: ", cluster, " region: ",r_name))
-  pca_prcomp <- prcomp(cluster_mdata, center=TRUE, scale=TRUE)
+  # Process each region
+  system(paste0("rm ", directory, "clustering/*.nc"))
+  #c<-0; 
+  names_ccf <- c(); ccf_temp_all <- c(); names_ccf_04 <- c(); ccf_temp_all_04 <- c()
+  pc_importance <- c(); row_names <- c()
+  index_list <- c(); region_list <- c(); cluster_list <- c(); cor04_list <- c(); pc_list <- c()
   
-  ###3. Permutation test starts
-  pca_prcomp_perm<- pca_eigenperm(t(cluster_mdata))
-  pca_rand95<- 
-    data.frame(Random_Eigenvalues = sapply(pca_prcomp_perm, quantile, 0.95)) %>%
-    #95% percentile of randome eigenvalues
-    mutate(PC = colnames(pca_prcomp$rotation)) %>%
-    #add PC IDs as discrete var
-    cbind(Eigenvalues = pca_prcomp$sdev^2)
-  #combine rand95 with real eigenvals
+  r <- c("Africa", "Americas", "Antarctica", "Asia", "Europe", "Oceania")
+  r_name <- "global"
+  ###1. Clustering starts
+  print(paste0("clustering starts for: ", r_name))
+  #c<-c+1
   
-  ## Only the first 3 PCs will be analysed because they represent most of the variance
-  pca_rand95_long<-
-    gather(pca_rand95[1:3, ], key = Variable, value = Value, -PC)
   
-  # Save permutation test
-  ggplot(pca_rand95_long, aes(PC, Value, fill = Variable)) +
-    geom_bar(stat = "identity", position = position_dodge())+
-    labs(y="Eigenvalue", x="", fill= "") +
-    theme_classic()
-  ggsave(paste0("permutation/", r, "_cluster",cluster,".pdf"),  width = 20, height = 13, units = "cm")
+  y <- HiClimR(mdata, lon = lon, lat = lat, lonStep = 1, latStep = 1, geogMask = TRUE,
+               continent = r, 
+               meanThresh = NULL, varThresh = NULL, detrend = TRUE,
+               standardize = TRUE, nPC = NULL, method = "ward", hybrid = FALSE, kH = NULL,
+               members = NULL, nSplit = 1, upperTri = TRUE, verbose = TRUE,
+               validClimR = TRUE, k = k, minSize = 1, alpha = 0.01,
+               plot = FALSE, colPalette = NULL, hang = -1, labels = FALSE)
   
-  ###3. Permutation test finished
+  # Save HiClimR results to avoid doing it again
+  save(y, file=paste0("HiClimR_output/",r_name,".RData"))
   
-  summ <- summary(pca_prcomp)
-  #print(summ)
+  # Save dendogram plot
+  pdf(paste0("clustering/",r_name, "_dendo.pdf"))
+  plot(y, hang = -1, labels = FALSE)
+  dev.off()
   
-  # Save importance (Proportion of Variance) of each pc for each cluster
-  pc_importance <- rbind(pc_importance, summ$importance[2,])
-  row_names <- c(row_names, paste0(r,cluster))
+  # Plot the resulting clustering on a map
+  coords_df <- data.frame(lon = y$coords[, 1], lat = y$coords[, 2], region = as.factor(y$region))
+  ggplot(coords_df, aes(x = lon, y = lat, fill = region)) +
+    geom_tile() +
+    scale_fill_manual(values = c(colors_plot[1:k])) +
+    theme_minimal() +
+    labs(title = paste("Region:", r), x = "Longitude", y = "Latitude") +
+    coord_fixed()
+  ggsave(paste0("clustering/", r_name, "_map.pdf"),  width = 20, height = 13, units = "cm")
   
-  # Save the first 3 PCs of each cluster
-  write.csv(pca_prcomp$x[,1:3], file=paste0("pc_data/", r, cluster,".csv"), quote = F, row.names = F)
+  # Export region map and mean timeseries into NetCDF-4 file and raster (tiff)
+  y.nc <- HiClimR2nc(y=y, ncfile=paste0("clustering/",r_name,".nc"), timeunit="years", dataunit="mm")
+  y.nctotiff <- brick(paste0("clustering/",r_name,".nc"), varname="region")
+  writeRaster(y.nctotiff, paste0("clustering/",r_name,".tiff"), overwrite=TRUE)  
   
-  variance_explained_3pcs <- summ$importance[2,][1:3]
-  raster_variance_explained_pc <- y.nctotiff
+  ###1. Clustering finished
   
-  other_clusters <- as.numeric(names(table(y$region)))
-  other_clusters <- other_clusters[-cluster]
-  
-  raster_variance_explained_pc[raster_variance_explained_pc %in% other_clusters] <- NA
-  
-  # Analysis made only for the first 3 PCs because they represent most of the variance
-  for (pc in 1:3){
-    #print("Inside a pc loop")
-    if (pca_rand95_long$Value[3+pc]>pca_rand95_long$Value[pc]){
-      
-      # Significant PCA after permutation test
-      scores_plot <- data.frame(year=year_range, score=pca_prcomp$x[,pc])
-      df_plot <- merge(scores_plot, oscillations)
-      
-      # Save al acf for every cluster
-      pdf(paste0("acf/",r_name, "_cluster",cluster,"_pc", pc,".pdf"))
-      acf(as.numeric(df_plot$score))
-      dev.off()
-      
-      for(ind in names(df_plot)[3:8]){
+  # Loop among cluster to implement PCA and permutation analysis 
+  for (cluster in as.numeric(names(table(y$region)))){
+    
+    cluster_mdata <- mdata[(y$region==cluster & (!is.na(y$region))),]
+    
+    #  Scaling and detrending (lowess method) all the data
+    cluster_mdata <- apply(cluster_mdata, MARGIN=1, FUN = function(x){scale(x)})
+    cluster_mdata <- apply(cluster_mdata, MARGIN=2, FUN = function(x){detrend(x, lowess = T)})
+    
+    ###2. Principal components starts
+    print(paste0("PCA for cluster: ", cluster, " region: ",r_name))
+    pca_prcomp <- prcomp(cluster_mdata, center=TRUE, scale=TRUE)
+    
+    ###3. Permutation test starts
+    pca_prcomp_perm<- pca_eigenperm(t(cluster_mdata))
+    pca_rand95<- 
+      data.frame(Random_Eigenvalues = sapply(pca_prcomp_perm, quantile, 0.95)) %>%
+      #95% percentile of randome eigenvalues
+      mutate(PC = colnames(pca_prcomp$rotation)) %>%
+      #add PC IDs as discrete var
+      cbind(Eigenvalues = pca_prcomp$sdev^2)
+    #combine rand95 with real eigenvals
+    
+    ## Only the first 3 PCs will be analysed because they represent most of the variance
+    pca_rand95_long<-
+      gather(pca_rand95[1:3, ], key = Variable, value = Value, -PC)
+    
+    # Save permutation test
+    ggplot(pca_rand95_long, aes(PC, Value, fill = Variable)) +
+      geom_bar(stat = "identity", position = position_dodge())+
+      labs(y="Eigenvalue", x="", fill= "") +
+      theme_classic()
+    ggsave(paste0("permutation/", r_name, "_cluster",cluster,".pdf"),  width = 20, height = 13, units = "cm")
+    
+    ###3. Permutation test finished
+    
+    summ <- summary(pca_prcomp)
+    #print(summ)
+    
+    # Save importance (Proportion of Variance) of each pc for each cluster
+    pc_importance <- rbind(pc_importance, summ$importance[2,])
+    row_names <- c(row_names, paste0(r_name, cluster))
+    
+    # Save the first 3 PCs of each cluster
+    write.csv(pca_prcomp$x[,1:3], file=paste0("pc_data/", r_name, cluster,".csv"), quote = F, row.names = F)
+    
+    variance_explained_3pcs <- summ$importance[2,][1:3]
+    raster_variance_explained_pc <- y.nctotiff
+    
+    other_clusters <- as.numeric(names(table(y$region)))
+    other_clusters <- other_clusters[-cluster]
+    
+    raster_variance_explained_pc[raster_variance_explained_pc %in% other_clusters] <- NA
+    
+    # Analysis made only for the first 3 PCs because they represent most of the variance
+    for (pc in 1:3){
+      #print("Inside a pc loop")
+      if (pca_rand95_long$Value[3+pc]>pca_rand95_long$Value[pc]){
         
-        # Cross-correlation between climate indexes and PC
-        ccf_temp <- ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5, plot = F)
+        # Significant PCA after permutation test
+        scores_plot <- data.frame(year=year_range, score=pca_prcomp$x[,pc])
+        df_plot <- merge(scores_plot, oscillations)
         
-        # Select only the significant ccf values
-        if (max(abs(ccf_temp$acf))>conf_interval){
-          #print(paste0("Inside a significant ccf value, greater than ", conf_interval))
+        # Save al acf for every cluster
+        pdf(paste0("acf/",r_name, "_cluster",cluster,"_pc", pc,".pdf"))
+        acf(as.numeric(df_plot$score))
+        dev.off()
+        
+        for(ind in names(df_plot)[3:8]){
           
-          index_list <- c(index_list, ind)
-          region_list <- c(region_list, r)
-          cluster_list <- c(cluster_list, cluster)
-          pc_list <- c(pc_list, pc)
-          if (max(abs(ccf_temp$acf))>0.4){
-            cor04_list <- c(cor04_list, "cor04")
-          }else{
-            cor04_list <- c(cor04_list, as.character(max(abs(ccf_temp$acf))))
+          # Cross-correlation between climate indexes and PC
+          ccf_temp <- ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5, plot = F)
+          
+          # Select only the significant ccf values
+          if (max(abs(ccf_temp$acf))>conf_interval){
+            #print(paste0("Inside a significant ccf value, greater than ", conf_interval))
+            
+            index_list <- c(index_list, ind)
+            region_list <- c(region_list, r)
+            cluster_list <- c(cluster_list, cluster)
+            pc_list <- c(pc_list, pc)
+            if (max(abs(ccf_temp$acf))>0.4){
+              cor04_list <- c(cor04_list, "cor04")
+            }else{
+              cor04_list <- c(cor04_list, as.character(max(abs(ccf_temp$acf))))
+            }
+            
+            pdf(paste0("ccf/",r_name, "_cluster",cluster,"_pc", pc, "_", ind, ".pdf"))
+            ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5)
+            dev.off()
+            
+            raster_variance_explained_pc[raster_variance_explained_pc==cluster] <- variance_explained_3pcs[pc]
+            writeRaster(raster_variance_explained_pc, paste0("pca_explained/",r_name,cluster,"_pc", pc,"_",ind,".tiff"), overwrite=TRUE)
+            
+            # Save the ccf plot between de pc and the climate indexes
+            pdf(paste0("pca/",r_name,"_cluster",cluster,"_ccf",pc,"_",ind,".pdf"))
+            ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5, ylim=c(-0.5,0.5),ylab=paste0("Correlation PC", pc, " - ", ind), main=paste0("CCF between PC and ", ind," oscillation"))
+            dev.off()
+            names_ccf <- c(names_ccf, paste0(r_name, "_cluster",cluster,"_ccf", pc, "_", ind))
+            ccf_temp_all <- rbind(ccf_temp_all, ccf_temp$acf)
+            
+            # Extract the loadings of each pc for each cluster
+            split_data <- strsplit(names(pca_prcomp$rotation[, 1]), ",")
+            loadings_cluster <- data.frame(matrix(unlist(split_data), ncol=2, byrow=TRUE))
+            names(loadings_cluster) <- c("lon", "lat")
+            loadings_cluster$lat <- as.numeric(loadings_cluster$lat)
+            loadings_cluster$lon <- as.numeric(loadings_cluster$lon)
+            loadings_cluster$loading <- as.numeric(pca_prcomp$rotation[, pc])
+            
+            #plot the loadings
+            ggplot(loadings_cluster, aes(x = lon, y = lat, fill = loading)) +
+              geom_tile() +
+              scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
+              theme_minimal() +
+              labs(title = paste("PC", pc, "Loadings for Cluster", cluster, "in", r_name), x = "Longitude", y = "Latitude") +
+              coord_fixed()
+            ggsave(paste0("loadings/", r_name, "_cluster", cluster, "_pc", pc, "_", ind, ".pdf"), width = 20, height = 13, units = "cm")
           }
           
-          pdf(paste0("ccf/",r_name, "_cluster",cluster,"_pc", pc, "_", ind, ".pdf"))
-          ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5)
-          dev.off()
+          if (max(abs(ccf_temp$acf))>0.4){
+            print("Inside a ccf value greater than 0.4")
+            
+            pdf(paste0("ccf_04/",r_name, "_cluster",cluster,"_pc", pc, "_", ind, ".pdf"))
+            ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5)
+            dev.off()
+            
+            raster_variance_explained_pc[raster_variance_explained_pc==cluster] <- variance_explained_3pcs[pc]
+            writeRaster(raster_variance_explained_pc, paste0("pca_04_explained/",r_name,cluster,"_pc", pc,"_",ind,".tiff"), overwrite=TRUE)
+            
+            # Save the ccf plot between de pc and the climate indexes
+            pdf(paste0("pca_04/",r_name,"_cluster",cluster,"_ccf",pc,"_",ind,".pdf"))
+            ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5, ylim=c(-0.5,0.5),ylab=paste0("Correlation PC", pc, " - ", ind), main=paste0("CCF between PC and ", ind," oscillation"))
+            dev.off()
+            names_ccf_04 <- c(names_ccf_04, paste0(r_name, "_cluster",cluster,"_ccf", pc, "_", ind))
+            ccf_temp_all_04 <- rbind(ccf_temp_all_04, ccf_temp$acf)
+            
+            # Extract the loadings of each pc for each cluster
+            split_data <- strsplit(names(pca_prcomp$rotation[, 1]), ",")
+            loadings_cluster <- data.frame(matrix(unlist(split_data), ncol=2, byrow=TRUE))
+            names(loadings_cluster) <- c("lon", "lat")
+            loadings_cluster$lat <- as.numeric(loadings_cluster$lat)
+            loadings_cluster$lon <- as.numeric(loadings_cluster$lon)
+            loadings_cluster$loading <- as.numeric(pca_prcomp$rotation[, pc])
+            
+            #plot the loadings
+            ggplot(loadings_cluster, aes(x = lon, y = lat, fill = loading)) +
+              geom_tile() +
+              scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
+              theme_minimal() +
+              labs(title = paste("PC", pc, "Loadings for Cluster", cluster, "in", r_name), x = "Longitude", y = "Latitude") +
+              coord_fixed()
+            ggsave(paste0("loadings_04/", r_name, "_cluster", cluster, "_pc", pc, "_", ind, ".pdf"), width = 20, height = 13, units = "cm")
+          }
           
-          raster_variance_explained_pc[raster_variance_explained_pc==cluster] <- variance_explained_3pcs[pc]
-          writeRaster(raster_variance_explained_pc, paste0("pca_explained/",r_name,cluster,"_pc", pc,"_",ind,".tiff"), overwrite=TRUE)
-          
-          # Save the ccf plot between de pc and the climate indexes
-          pdf(paste0("pca/",r_name,"_cluster",cluster,"_ccf",pc,"_",ind,".pdf"))
-          ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5, ylim=c(-0.5,0.5),ylab=paste0("Correlation PC", pc, " - ", ind), main=paste0("CCF between PC and ", ind," oscillation"))
-          dev.off()
-          names_ccf_04 <- c(names_ccf_04, paste0(r, "_cluster",cluster,"_ccf", pc, "_", ind))
-          ccf_temp_all_04 <- rbind(ccf_temp_all_04, ccf_temp$acf)
-          
-          # Extract the loadings of each pc for each cluster
-          split_data <- strsplit(names(pca_prcomp$rotation[, 1]), ",")
-          loadings_cluster <- data.frame(matrix(unlist(split_data), ncol=2, byrow=TRUE))
-          names(loadings_cluster) <- c("lon", "lat")
-          loadings_cluster$lat <- as.numeric(loadings_cluster$lat)
-          loadings_cluster$lon <- as.numeric(loadings_cluster$lon)
-          loadings_cluster$loading <- as.numeric(pca_prcomp$rotation[, pc])
-          
-          #plot the loadings
-          ggplot(loadings_cluster, aes(x = lon, y = lat, fill = loading)) +
-            geom_tile() +
-            scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
-            theme_minimal() +
-            labs(title = paste("PC", pc, "Loadings for Cluster", cluster, "in", r), x = "Longitude", y = "Latitude") +
-            coord_fixed()
-          ggsave(paste0("loadings/", r, "_cluster", cluster, "_pc", pc, "_", ind, ".pdf"), width = 20, height = 13, units = "cm")
         }
         
-        if (max(abs(ccf_temp$acf))>0.4){
-          print("Inside a ccf value greater than 0.4")
-          
-          pdf(paste0("ccf_04/",r_name, "_cluster",cluster,"_pc", pc, "_", ind, ".pdf"))
-          ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5)
-          dev.off()
-          
-          raster_variance_explained_pc[raster_variance_explained_pc==cluster] <- variance_explained_3pcs[pc]
-          writeRaster(raster_variance_explained_pc, paste0("pca_04_explained/",r,cluster,"_pc", pc,"_",ind,".tiff"), overwrite=TRUE)
-          
-          # Save the ccf plot between de pc and the climate indexes
-          pdf(paste0("pca_04/",r_name,"_cluster",cluster,"_ccf",pc,"_",ind,".pdf"))
-          ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5, ylim=c(-0.5,0.5),ylab=paste0("Correlation PC", pc, " - ", ind), main=paste0("CCF between PC and ", ind," oscillation"))
-          dev.off()
-          names_ccf_04 <- c(names_ccf_04, paste0(r, "_cluster",cluster,"_ccf", pc, "_", ind))
-          ccf_temp_all_04 <- rbind(ccf_temp_all_04, ccf_temp$acf)
-          
-          # Extract the loadings of each pc for each cluster
-          split_data <- strsplit(names(pca_prcomp$rotation[, 1]), ",")
-          loadings_cluster <- data.frame(matrix(unlist(split_data), ncol=2, byrow=TRUE))
-          names(loadings_cluster) <- c("lon", "lat")
-          loadings_cluster$lat <- as.numeric(loadings_cluster$lat)
-          loadings_cluster$lon <- as.numeric(loadings_cluster$lon)
-          loadings_cluster$loading <- as.numeric(pca_prcomp$rotation[, pc])
-          
-          #plot the loadings
-          ggplot(loadings_cluster, aes(x = lon, y = lat, fill = loading)) +
-            geom_tile() +
-            scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
-            theme_minimal() +
-            labs(title = paste("PC", pc, "Loadings for Cluster", cluster, "in", r), x = "Longitude", y = "Latitude") +
-            coord_fixed()
-          ggsave(paste0("loadings_04/", r, "_cluster", cluster, "_pc", pc, "_", ind, ".pdf"), width = 20, height = 13, units = "cm")
-        }
-        
+      }else{
+        print(paste0("NON SIGNIFICANT PCA ADDED", r_name, "_cluster",cluster,"_ccf", pc))        
       }
       
-    }else{
-      print(paste0("NON SIGNIFICANT PCA ADDED", r, "_cluster",cluster,"_ccf", pc))        
+      
     }
-    
-    
   }
+  
+  save(names_ccf_04, ccf_temp_all_04, file="pca_04/ccf_04_global.RData")
+  ccf_temp_all_04 <- t(ccf_temp_all_04)
+  colnames(ccf_temp_all_04) <- names_ccf_04
+  write.csv(ccf_temp_all_04, file="pca_04/ccf_04_global.csv", quote=F, row.names=F)
+  
+  save(names_ccf, ccf_temp_all, file="pca/ccf_global.RData")
+  ccf_temp_all <- t(ccf_temp_all)
+  colnames(ccf_temp_all) <- names_ccf
+  write.csv(ccf_temp_all, file="pca/ccf_global.csv", quote=F, row.names=F)
+  
+  row.names(pc_importance) <- row_names
+  write.csv(pc_importance, file = "pc_data/pc_proportion_variance_global.csv", quote = F)
+  
+  summary_ccf <- data.frame(index=index_list, region=region_list, cluster=cluster_list, pc=pc_list, cor=cor04_list)
+  write.csv(summary_ccf, file = "summary_ccf_global.csv", quote = F, row.names = F)
+  
+  print(paste0("############## END:", k, "##############"))
+  
 }
 
-save(names_ccf_04, ccf_temp_all_04, file="pca_04/ccf_04.RData")
-ccf_temp_all_04 <- t(ccf_temp_all_04)
-colnames(ccf_temp_all_04) <- names_ccf_04
-write.csv(ccf_temp_all_04, file="pca_04/ccf_04.csv", quote=F, row.names=F)
 
-row.names(pc_importance) <- row_names
-write.csv(pc_importance, file = "pc_data/pc_proportion_variance.csv", quote = F)
-
-summary_ccf <- data.frame(index=index_list, region=region_list, cluster=cluster_list, pc=pc_list, cor=cor04_list)
-write.csv(summary_ccf, file = "summary_ccf.csv", quote = F, row.names = F)
-
-print(paste0("############## END:", variable, "##############"))

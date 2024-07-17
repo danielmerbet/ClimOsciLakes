@@ -2,7 +2,7 @@ library(ncdf4); library(HiClimR); library(raster);library(astsa);library(tidyver
 
 # Set working directory and create necessary folders
 variable <- "surftemp" #surftemp or bottemp
-directory_base <- "/home/dmercado/Documents/ClimOsciLakes/"
+directory_base <- "/home/dmercado/Documents/ClimOsciLakes/regional/"
 directory  <- paste0(directory_base, variable, "/")
 print(paste0("############## START:", variable, "##############"))
 setwd(directory)
