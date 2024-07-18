@@ -16,16 +16,6 @@ ml CDO
 ml NCO
 ml GDAL
 
-#rm clustering/*  
-#rm figures/*
-#rm pca/*
-#rm pca_04/*
-#rm pca_explained/* 
-#rm permutation/*
-#rm acf/*
-#rm cluster_mdata/*
-#rm pca_04_explained/*
-
 Rscript pca_analysis_global.R
 
 echo TERMINA TODO `date`

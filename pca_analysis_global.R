@@ -1,7 +1,7 @@
 library(ncdf4); library(HiClimR); library(raster); library(astsa); library(tidyverse) #library(pcaMethods)
 
 # Set working directory and create necessary folders
-variable <- "bottemp" #surftemp or bottemp
+variable <- "surftemp" #surftemp or bottemp
 directory_base <- "/data/brussel/vo/000/bvo00012/vsc10623/ClimOsciLakes/"
 print(paste0("############## START:", variable, "##############"))
 setwd(directory_base)
@@ -50,13 +50,13 @@ mdata <- mdata[,(50:ncol(mdata))]
 
 # Set clustering parameters
 #k <- c(4,4,6,7,3,7)
-colors_plot <- c(1:50)
+colors_plot <- c(1:100)
 
 # Calculate confidence interval of the pca
 n <- length(oscillations$year)
 conf_interval <- 1.96 / sqrt(n)
 
-for (k in 5:50){
+for (k in 51:100){
   
   directory  <- paste0(directory_base, "global/",variable, "/")
   print(paste0("############## START:", k, "##############"))
@@ -147,11 +147,11 @@ for (k in 5:50){
       gather(pca_rand95[1:3, ], key = Variable, value = Value, -PC)
     
     # Save permutation test
-    ggplot(pca_rand95_long, aes(PC, Value, fill = Variable)) +
-      geom_bar(stat = "identity", position = position_dodge())+
-      labs(y="Eigenvalue", x="", fill= "") +
-      theme_classic()
-    ggsave(paste0("permutation/", r_name, "_cluster",cluster,".pdf"),  width = 20, height = 13, units = "cm")
+    #ggplot(pca_rand95_long, aes(PC, Value, fill = Variable)) +
+    #  geom_bar(stat = "identity", position = position_dodge())+
+    #  labs(y="Eigenvalue", x="", fill= "") +
+    #  theme_classic()
+    #ggsave(paste0("permutation/", r_name, "_cluster",cluster,".pdf"),  width = 20, height = 13, units = "cm")
     
     ###3. Permutation test finished
     
@@ -183,9 +183,9 @@ for (k in 5:50){
         df_plot <- merge(scores_plot, oscillations)
         
         # Save al acf for every cluster
-        pdf(paste0("acf/",r_name, "_cluster",cluster,"_pc", pc,".pdf"))
-        acf(as.numeric(df_plot$score))
-        dev.off()
+        #pdf(paste0("acf/",r_name, "_cluster",cluster,"_pc", pc,".pdf"))
+        #acf(as.numeric(df_plot$score))
+        #dev.off()
         
         for(ind in names(df_plot)[3:8]){
           
@@ -197,7 +197,7 @@ for (k in 5:50){
             #print(paste0("Inside a significant ccf value, greater than ", conf_interval))
             
             index_list <- c(index_list, ind)
-            region_list <- c(region_list, r)
+            #region_list <- c(region_list, r)
             cluster_list <- c(cluster_list, cluster)
             pc_list <- c(pc_list, pc)
             if (max(abs(ccf_temp$acf))>0.4){
@@ -206,17 +206,17 @@ for (k in 5:50){
               cor04_list <- c(cor04_list, as.character(max(abs(ccf_temp$acf))))
             }
             
-            pdf(paste0("ccf/",r_name, "_cluster",cluster,"_pc", pc, "_", ind, ".pdf"))
-            ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5)
-            dev.off()
+            #pdf(paste0("ccf/",r_name, "_cluster",cluster,"_pc", pc, "_", ind, ".pdf"))
+            #ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5)
+            #dev.off()
             
             raster_variance_explained_pc[raster_variance_explained_pc==cluster] <- variance_explained_3pcs[pc]
-            writeRaster(raster_variance_explained_pc, paste0("pca_explained/",r_name,cluster,"_pc", pc,"_",ind,".tiff"), overwrite=TRUE)
+            #writeRaster(raster_variance_explained_pc, paste0("pca_explained/",r_name,cluster,"_pc", pc,"_",ind,".tiff"), overwrite=TRUE)
             
             # Save the ccf plot between de pc and the climate indexes
-            pdf(paste0("pca/",r_name,"_cluster",cluster,"_ccf",pc,"_",ind,".pdf"))
-            ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5, ylim=c(-0.5,0.5),ylab=paste0("Correlation PC", pc, " - ", ind), main=paste0("CCF between PC and ", ind," oscillation"))
-            dev.off()
+            #pdf(paste0("pca/",r_name,"_cluster",cluster,"_ccf",pc,"_",ind,".pdf"))
+            #ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5, ylim=c(-0.5,0.5),ylab=paste0("Correlation PC", pc, " - ", ind), main=paste0("CCF between PC and ", ind," oscillation"))
+            #dev.off()
             names_ccf <- c(names_ccf, paste0(r_name, "_cluster",cluster,"_ccf", pc, "_", ind))
             ccf_temp_all <- rbind(ccf_temp_all, ccf_temp$acf)
             
@@ -229,13 +229,13 @@ for (k in 5:50){
             loadings_cluster$loading <- as.numeric(pca_prcomp$rotation[, pc])
             
             #plot the loadings
-            ggplot(loadings_cluster, aes(x = lon, y = lat, fill = loading)) +
-              geom_tile() +
-              scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
-              theme_minimal() +
-              labs(title = paste("PC", pc, "Loadings for Cluster", cluster, "in", r_name), x = "Longitude", y = "Latitude") +
-              coord_fixed()
-            ggsave(paste0("loadings/", r_name, "_cluster", cluster, "_pc", pc, "_", ind, ".pdf"), width = 20, height = 13, units = "cm")
+            #ggplot(loadings_cluster, aes(x = lon, y = lat, fill = loading)) +
+            #  geom_tile() +
+            #  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
+            #  theme_minimal() +
+            #  labs(title = paste("PC", pc, "Loadings for Cluster", cluster, "in", r_name), x = "Longitude", y = "Latitude") +
+            #  coord_fixed()
+            #ggsave(paste0("loadings/", r_name, "_cluster", cluster, "_pc", pc, "_", ind, ".pdf"), width = 20, height = 13, units = "cm")
           }
           
           if (max(abs(ccf_temp$acf))>0.4){
@@ -296,7 +296,8 @@ for (k in 5:50){
   row.names(pc_importance) <- row_names
   write.csv(pc_importance, file = "pc_data/pc_proportion_variance_global.csv", quote = F)
   
-  summary_ccf <- data.frame(index=index_list, region=region_list, cluster=cluster_list, pc=pc_list, cor=cor04_list)
+  #summary_ccf <- data.frame(index=index_list, region=region_list, cluster=cluster_list, pc=pc_list, cor=cor04_list)
+  summary_ccf <- data.frame(index=index_list, cluster=cluster_list, pc=pc_list, cor=cor04_list)
   write.csv(summary_ccf, file = "summary_ccf_global.csv", quote = F, row.names = F)
   
   print(paste0("############## END:", k, "##############"))
