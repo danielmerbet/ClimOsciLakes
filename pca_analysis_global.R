@@ -1,7 +1,7 @@
 library(ncdf4); library(HiClimR); library(raster); library(astsa); library(tidyverse) #library(pcaMethods)
 
 # Set working directory and create necessary folders
-variable <- "surftemp" #surftemp or bottemp
+variable <- "bottemp" #surftemp or bottemp
 directory_base <- "/data/brussel/vo/000/bvo00012/vsc10623/ClimOsciLakes/"
 print(paste0("############## START:", variable, "##############"))
 setwd(directory_base)
@@ -56,7 +56,7 @@ colors_plot <- c(1:100)
 n <- length(oscillations$year)
 conf_interval <- 1.96 / sqrt(n)
 
-for (k in 51:100){
+for (k in 5:100){
   
   directory  <- paste0(directory_base, "global/",variable, "/")
   print(paste0("############## START:", k, "##############"))
@@ -200,11 +200,12 @@ for (k in 51:100){
             #region_list <- c(region_list, r)
             cluster_list <- c(cluster_list, cluster)
             pc_list <- c(pc_list, pc)
-            if (max(abs(ccf_temp$acf))>0.4){
-              cor04_list <- c(cor04_list, "cor04")
-            }else{
-              cor04_list <- c(cor04_list, as.character(max(abs(ccf_temp$acf))))
-            }
+            cor04_list <- c(cor04_list, max(abs(ccf_temp$acf)))
+	    #if (max(abs(ccf_temp$acf))>0.4){
+            #  cor04_list <- c(cor04_list, max(abs(ccf_temp$acf)))
+            #}else{
+            #  cor04_list <- c(cor04_list, max(abs(ccf_temp$acf)))
+            #}
             
             #pdf(paste0("ccf/",r_name, "_cluster",cluster,"_pc", pc, "_", ind, ".pdf"))
             #ccf(as.numeric(df_plot$score),df_plot[ind], lag.max = 5)

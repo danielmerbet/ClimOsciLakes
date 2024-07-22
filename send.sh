@@ -3,8 +3,10 @@
 #SBATCH --job-name=oscilake
 #SBATCH --output=%x-%j.out
 #SBATCH --mem=100G
-#SBATCH --partition=skylake
 #SBATCH --time=05-00:00:00
+
+
+###SBATCH --partition=skylake
 
 ###SBATCH --nodes=1
 

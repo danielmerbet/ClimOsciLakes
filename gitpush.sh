@@ -3,4 +3,4 @@
 #SBATCH --time=01-00:00:00
 
 git add --all
-git commit -m "reduce size"
+git commit -m "adjust ccf save"
