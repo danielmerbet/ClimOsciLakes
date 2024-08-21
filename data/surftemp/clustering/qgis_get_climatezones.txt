@@ -1,0 +1,21 @@
+To calculate climate_zones.shp using QGIS:
+
+1. Open clustering.shp and koppen_geiger_0p00833333_1991-2020.tif
+2. Apply "Clip Raster by mask Layer" between both file, deselecting DN = -9999 (to remove error data)S
+3. Apply zonal statistics, in the "statitistics to calculate" option choose "Majority"
+4. Run and save.
+
+Code Outcome:
+
+"""
+Double-click on the history item or paste the command below to re-run the algorithm
+"""
+
+ processing.run("gdal:cliprasterbymasklayer", {'INPUT':'/home/dmercado/Downloads/koppen_geiger_tif/1991_2020/koppen_geiger_0p00833333.tif','MASK':'/home/dmercado/Documents/ClimOsciLakes/data/surftemp/clustering/clustering.shp','SOURCE_CRS':None,'TARGET_CRS':None,'TARGET_EXTENT':None,'NODATA':None,'ALPHA_BAND':False,'CROP_TO_CUTLINE':True,'KEEP_RESOLUTION':False,'SET_RESOLUTION':False,'X_RESOLUTION':None,'Y_RESOLUTION':None,'MULTITHREADING':False,'OPTIONS':'','DATA_TYPE':0,'EXTRA':'','OUTPUT':'TEMPORARY_OUTPUT'})
+ 
+ 
+ """
+Double-click on the history item or paste the command below to re-run the algorithm
+"""
+
+ processing.run("native:zonalstatisticsfb", {'INPUT':'/home/dmercado/Documents/ClimOsciLakes/data/surftemp/clustering/clustering.shp','INPUT_RASTER':'/tmp/processing_ELaUKC/aa70005e241b494fba8d6e6a20d9d3da/OUTPUT.tif','RASTER_BAND':1,'COLUMN_PREFIX':'_','STATISTICS':[9],'OUTPUT':'TEMPORARY_OUTPUT'})

@@ -1,0 +1,10 @@
+Step-by-Step Guide to obtain clustering in QGIS:
+
+-Read original clustering, the raster file "global.tiff"
+-Raster -> Conversion -> Poligonize -> Select input layer and add "DN" as layer name
+-Manually look for errors and set "DN" as -9999
+-Vector -> Geoprocessing Tools -> Dissolve -> Dissolve field "DN"
+-Save the Dissolve vector as clustering
+
+
+

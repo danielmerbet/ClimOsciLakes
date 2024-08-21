@@ -1,0 +1,30 @@
+Step-by-Step Guide to calculate centroids in QGIS
+
+    Open QGIS and Load the Shapefile:
+
+        Go to Layer > Add Layer > Add "Clustering"
+        Browse and select shapefile.
+
+    Calculate Centroids:
+
+        Make sure the layer is selected in the Layers panel.
+        Go to Vector > Geometry Tools > Centroids.
+        Set the input layer to the shapefile.
+        Specify the output layer centroids.
+
+    Save Centroids as a New Shapefile:
+
+        Click Run to generate the centroids.
+        Check the new centroid layer in the Layers panel.
+        Right-click the centroid layer and select Export > Save Features As.
+        Choose the format (Shapefile).
+        
+    Save Centroids as a CSV:
+
+        Check the new centroid layer in the Layers panel.
+        Right-click the centroid layer and select Export > Save Features As.
+        Choose the format Comma Separated Value [CSV].
+        Selected in GEOMETRY AS_XY
+        Save as centroids_coord.csv
+        
+     

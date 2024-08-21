@@ -1,0 +1,12 @@
+To correct clustering geotiff (global.tiff)
+
+Apply "Clip Raster by Mask Layer":
+
+Input layer "global_original"
+
+Mask layer "clustering"
+
+Apply for "Selected features only"
+
+gdalwarp -overwrite -s_srs EPSG:4326 -t_srs EPSG:4326 -of GTiff -cutline /tmp/processing_ELaUKC/f1c3f4b8a4c245248eb218c3895b0263/MASK.gpkg -cl MASK -crop_to_cutline /home/dmercado/Documents/ClimOsciLakes/data/bottemp/clustering/global.tiff /tmp/processing_ELaUKC/09e6feadad0141afa744794e75ee65af/OUTPUT.tif
+
