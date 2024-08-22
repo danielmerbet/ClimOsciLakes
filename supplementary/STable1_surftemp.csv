@@ -1,0 +1,27 @@
+Climate zones,Clusters,Total
+Tropical,"1-4,7,9,10",7
+TrLongwave radiation,"1-4,7,9,10",7
+TrTemperature,"4,10",2
+TrPrecipitation,"1,10",2
+TrWind,2-3,2
+Temperate,"5-6,11,17,29",5
+TeTemperature,"5-6,11,17,29",5
+TePrecipitation,5,1
+TeWind,11,1
+TeSolar radiation,6,1
+Cold,"15,19-20,22-23,25,28,30-34-41,43-46",23
+CTemperature,"15,19-20,22-23,28,30-33,35-36,38-39,43-44,45",17
+CPrecipitation,"19-20,34,37,41,43,45",7
+CSolar radiation,"15,30,32-34,39,45",7
+CWind,41,1
+Arid,"4,8,12-14,16,18,21,24,26",10
+ATemperature,"4,8,12-14,16,21,26",8
+AWind,"16,18,24",
+APrecipitation,"8,14",2
+ALongwave radiation,"4,13,24",3
+ASolar radiation,26,1
+Polar ,"1,27,37,42,47",5
+PPrecipitation,"1,37,42",3
+PSolar radiation,"27,47",2
+PWind,27,1
+PLongwave radiation,1,1

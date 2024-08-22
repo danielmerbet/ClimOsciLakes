@@ -113,7 +113,6 @@ climate_zones$cluster_reorder <- 1:47
 clustering_reorder <- clustering
 shape_df$DN_reorder <- NA
 summary_ccf_pc10per$cluster_reorder <- NA
-
 c<-0
 for (l in order_to_apply){
   c <- c+1
@@ -122,8 +121,8 @@ for (l in order_to_apply){
   shape_df$DN_reorder[shape_df$DN==l] <- c
 }
 
+# Load map with climate zones to plot
 shapefile <- st_read("clustering/climate_zones_vectorized.shp")
-
 shapefile$majority <- NA
 #tropical climates
 shapefile$majority[shapefile$X_majority %in% 1:3] <- "Tropical" 
@@ -135,6 +134,9 @@ shapefile$majority[shapefile$X_majority %in% 8:16] <- "Temperate"
 shapefile$majority[shapefile$X_majority %in% 17:28] <- "Cold" 
 #polar climates
 shapefile$majority[shapefile$X_majority %in% 29:30] <- "Polar"
+
+#Load relation with climate indices
+index_var <- read.csv("XGBoost/index_variable.csv")
 
 offset_point <- 0
 # Create the global map

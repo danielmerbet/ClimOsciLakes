@@ -4,7 +4,7 @@ library(sf)
 library(RColorBrewer)
 
 # Set working directory and create necessary folders
-variable <- "surftemp" #surftemp or bottemp
+variable <- "bottemp" #surftemp or bottemp
 directory_base <- "/home/dmercado/Documents/ClimOsciLakes/"
 k <- 47 #number of total clusters
 directory  <- paste0(directory_base, "data/",variable)
@@ -41,3 +41,16 @@ table(summary_ccf_pc10per$index)/sum(table(summary_ccf_pc10per$index))
 #enso       iod       nao       pdo 
 #0.2873563 0.1781609 0.3103448 0.2241379 
 
+# Percentage of climate variable influencing the clusters that are also correlated
+#with the climate indices
+index_var <- read.csv("XGBoost/index_variable.csv")
+index_var_ok <- index_var[!(index_var$var_save %in% c("hurs","ps")),]
+na_index_var_ok <- index_var_ok[is.na(index_var_ok$cor_save),]
+(1-(nrow(na_index_var_ok)/nrow(index_var_ok)))*100
+
+#surftemp:
+#> (1-(nrow(na_index_var_ok)/nrow(index_var_ok)))*100
+#[1] 75
+#bottemp:
+#(1-(nrow(na_index_var_ok)/nrow(index_var_ok)))*100
+#[1] 77.5

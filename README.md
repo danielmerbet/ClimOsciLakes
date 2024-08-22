@@ -1,2 +1,2 @@
 # ClimOsciLakes
-First version of analysis relating climate oscillation (ENSO, NAO, PDO) and surface water temperature of lakes in the global scale
+Analysis relating climate oscillation (ENSO, IOD, NAO, PDO) and surface and bottom water temperature of lakes in the global scale
